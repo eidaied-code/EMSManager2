@@ -7,9 +7,12 @@ from io import BytesIO
 from data_manager import DataManager
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG, force=True)
 
 app = Flask(__name__)
+
+# Ensure data directory exists on startup
+os.makedirs('data', exist_ok=True)
 app.secret_key = os.environ.get("SESSION_SECRET", "your-secret-key-here")
 
 # Initialize data manager
@@ -862,6 +865,23 @@ def export_tasks():
         logging.error(f"Export tasks error: {e}")
         flash('حدث خطأ في تصدير البيانات', 'error')
         return redirect(url_for('tasks'))
+
+
+@app.route('/health')
+def health():
+    try:
+        # simple check: return counts length of current datasets
+        employees = data_manager.get_employees()
+        ambulances = data_manager.get_ambulances()
+        return jsonify({
+            "status": "ok",
+            "employees": len(employees),
+            "ambulances": len(ambulances)
+        }), 200
+    except Exception as e:
+        logging.exception("Health check failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
